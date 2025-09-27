@@ -1,16 +1,6 @@
 # Akıllı Fatura OCR + ERP Entegrasyon Sistemi
 
-[![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https:#### Upload Arayüzü
-```
-┌─────────────────────────────────────────┐
-│  Fatura Yükle                          │
-│  ┌─────────────────────────────────────┐│
-│  │  Dosyayı buraya sürükleyin veya    ││
-│  │  [Dosya Seç] düğmesini kullanın       ││  
-│  └─────────────────────────────────────┘│
-│            [Yükle ve İşle]             │
-└─────────────────────────────────────────┘
-```iangolo.com/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://reactjs.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-336791?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
@@ -29,15 +19,15 @@ Bu proje, işletmelerin fatura işleme süreçlerini otomatikleştirerek:
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│    React Web    │◄──►│     FastAPI     │◄──►│    PostgreSQL   │
-│    Frontend     │    │     Backend     │    │     Database    │
+│   React Web     │◄──►│   FastAPI       │◄──►│  PostgreSQL     │
+│   Frontend      │    │   Backend       │    │   Database      │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
                                 │
                         ┌───────┴────────┐
                         ▼                ▼
                ┌─────────────────┐ ┌─────────────────┐
-               │    OCR Engine   │ │   WOLVOX ERP    │
-               │    Tesseract    │ │   Integration   │
+               │  OCR Engine     │ │   WOLVOX ERP    │
+               │  (Tesseract)    │ │   Integration   │
                └─────────────────┘ └─────────────────┘
 ```
 
@@ -155,17 +145,36 @@ result = requests.get(f'http://localhost:8000/results/{invoice["id"]}')
 ### Ekran Görüntüleri
 
 #### Upload Arayüzü
-- Dosya yükleme için sürükle-bırak arayüzü
-- Desteklenen formatlar: PDF, JPG, PNG
-- Yükle ve İşle butonu ile otomatik OCR başlatma
+```
+┌─────────────────────────────────────────┐
+            [📤 Fatura Yükle]                       
+  
+  ┌─────────────────────────────────────┐
+      Dosyayı buraya sürükleyin veya     
+      [📁 Dosya Seç] düğmesini kullanın    
+  └─────────────────────────────────────┘
+  
+            [📤 Yükle ve İşle]          
+└─────────────────────────────────────────┘
+```
 
 #### Sonuç Görünümü
-- OCR sonuçlarının tablo halinde gösterimi
-- Her alan için düzenleme imkanı (✏ simgesi ile)
-- Status göstergesi: OCR Tamamlandı
-- Fatura No, Tarih, Firma, Vergi No, Toplam, KDV bilgileri
-- Güven skoru gösterimi (%94 gibi)
-- ERP'ye Gönder butonu
+```
+┌─────────────────────────────────────────┐
+  OCR Sonuçları                          
+  Status: [OCR Tamamlandı]               
+                                         
+  Fatura No:    [ABC123        ✏]       
+  Tarih:        [15.01.2024    ✏]       
+  Firma:        [ABC Ltd       ✏]       
+  Vergi No:     [1234567890    ✏]       
+  Toplam:       [1.250,00 TL   ✏]       
+  KDV:          [225,00 TL     ✏]       
+  Güven: %94                             
+                                         
+               [ERP'ye Gönder]                
+└─────────────────────────────────────────┘
+```
 
 ## Geliştirme
 
