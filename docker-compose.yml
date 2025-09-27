@@ -1,0 +1,123 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15
+    container_name: invoice_db
+    environment:
+      POSTGRES_USER: invoice_user
+      POSTGRES_PASSWORD: invoice_pass_123
+      POSTGRES_DB: invoice_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - invoice_network
+    restart: unless-stopped
+
+  # Backend API (FastAPI)
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: invoice_backend
+    environment:
+      DATABASE_URL: postgresql://invoice_user:invoice_pass_123@db:5432/invoice_db
+      PYTHONPATH: /app
+    volumes:
+      - ./backend/uploads:/app/uploads
+      - ./backend/app:/app/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    networks:
+      - invoice_network
+    restart: unless-stopped
+    command: >
+      sh -c "
+        pip install --no-cache-dir -r requirements.txt &&
+        python -m spacy download en_core_web_sm || echo 'spaCy model download failed, continuing...' &&
+        apt-get update && apt-get install -y tesseract-ocr tesseract-ocr-tur &&
+        uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+      "
+
+  # Frontend (React)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: invoice_frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - invoice_network
+    restart: unless-stopped
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+    environment:
+      REACT_APP_API_URL: http://localhost:8000
+
+  # Redis (for caching and background tasks)
+  redis:
+    image: redis:7-alpine
+    container_name: invoice_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - invoice_network
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+
+  # pgAdmin (Database Management)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: invoice_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@invoice.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    ports:
+      - "8080:80"
+    depends_on:
+      - db
+    networks:
+      - invoice_network
+    restart: unless-stopped
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+
+  # WOLVOX Mock API (for testing ERP integration)
+  wolvox_mock:
+    build:
+      context: ./mock-erp
+      dockerfile: Dockerfile
+    container_name: wolvox_mock_api
+    ports:
+      - "9000:9000"
+    networks:
+      - invoice_network
+    restart: unless-stopped
+    environment:
+      PORT: 9000
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+
+networks:
+  invoice_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

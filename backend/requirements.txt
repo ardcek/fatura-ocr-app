@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+pytesseract
+pillow
+sqlalchemy
+psycopg2-binary
+alembic
+python-multipart
+spacy
+python-dateutil
+regex
+pdfplumber
+opencv-python
+numpy
