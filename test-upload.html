@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice OCR Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5rem;
+        }
+        
+        .upload-section {
+            border: 2px dashed #667eea;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            background: #f8f9ff;
+            margin-bottom: 30px;
+        }
+        
+        .file-input {
+            margin: 20px 0;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            width: 300px;
+        }
+        
+        .upload-btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 18px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .upload-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+        }
+        
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        
+        .loading {
+            color: #667eea;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📄 Invoice OCR Test</h1>
+        
+        <div class="upload-section">
+            <h3>Fatura Yükle ve Test Et</h3>
+            <p>Resim dosyası seçin (JPG, PNG)</p>
+            
+            <input type="file" id="fileInput" class="file-input" accept="image/*">
+            <br>
+            <button onclick="uploadFile()" id="uploadBtn" class="upload-btn">
+                📤 Yükle ve İşle
+            </button>
+            
+            <div id="result" class="result"></div>
+        </div>
+        
+        <div style="text-align: center; margin-top: 30px;">
+            <p><strong>Backend Status:</strong> <span id="backendStatus">Kontrol ediliyor...</span></p>
+            <p><strong>API Endpoints:</strong></p>
+            <ul style="text-align: left; display: inline-block;">
+                <li>GET <a href="http://localhost:8000" target="_blank">http://localhost:8000</a> - Ana sayfa</li>
+                <li>GET <a href="http://localhost:8000/health" target="_blank">http://localhost:8000/health</a> - Sağlık durumu</li>
+                <li>POST http://localhost:8000/upload - Dosya yükleme</li>
+                <li>POST http://localhost:8000/test-ocr - OCR testi</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Backend status kontrolü
+        async function checkBackendStatus() {
+            try {
+                const response = await fetch('http://localhost:8000/health');
+                if (response.ok) {
+                    document.getElementById('backendStatus').innerHTML = '✅ Çalışıyor';
+                    document.getElementById('backendStatus').style.color = 'green';
+                } else {
+                    document.getElementById('backendStatus').innerHTML = '❌ Hata: ' + response.status;
+                    document.getElementById('backendStatus').style.color = 'red';
+                }
+            } catch (error) {
+                document.getElementById('backendStatus').innerHTML = '❌ Bağlantı hatası';
+                document.getElementById('backendStatus').style.color = 'red';
+            }
+        }
+        
+        // Dosya yükleme
+        async function uploadFile() {
+            const fileInput = document.getElementById('fileInput');
+            const result = document.getElementById('result');
+            const uploadBtn = document.getElementById('uploadBtn');
+            
+            if (!fileInput.files || fileInput.files.length === 0) {
+                showResult('Lütfen bir dosya seçin!', 'error');
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            
+            // Dosya tipini kontrol et
+            if (!file.type.startsWith('image/')) {
+                showResult('Lütfen resim dosyası seçin (JPG, PNG)!', 'error');
+                return;
+            }
+            
+            uploadBtn.disabled = true;
+            uploadBtn.innerHTML = '⏳ Yükleniyor...';
+            
+            try {
+                // FormData oluştur
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                // Upload endpoint'ine gönder
+                showResult('Dosya yükleniyor...', 'loading');
+                
+                const response = await fetch('http://localhost:8000/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                console.log('API Response:', data);  // Debug log
+                
+                if (response.ok) {
+                    // OCR sonuçlarını da göster
+                    let resultHtml = `✅ ${data.message}<br>
+                         📁 Dosya: ${data.filename}<br>
+                         📏 Boyut: ${data.size} bytes<br>
+                         🗂️ Tip: ${data.content_type}<br>`;
+                    
+                    if (data.ocr_result) {
+                        resultHtml += `<br><strong>📝 OCR Sonuçları:</strong><br>`;
+                        resultHtml += `🎯 Güven: ${(data.ocr_result.confidence * 100).toFixed(1)}%<br>`;
+                        
+                        if (data.ocr_result.extracted_fields) {
+                            const fields = data.ocr_result.extracted_fields;
+                            resultHtml += `<br><strong>📋 Çıkarılan Alanlar:</strong><br>`;
+                            
+                            if (fields.company_name) resultHtml += `🏢 Firma: ${fields.company_name}<br>`;
+                            if (fields.invoice_number) resultHtml += `📄 Fatura No: ${fields.invoice_number}<br>`;
+                            if (fields.date) resultHtml += `📅 Tarih: ${fields.date}<br>`;
+                            if (fields.total_amount) resultHtml += `💰 Tutar: ${fields.total_amount} TL<br>`;
+                            if (fields.tax_number) resultHtml += `🆔 Vergi No: ${fields.tax_number}<br>`;
+                            
+                            if (fields.line_items && fields.line_items.length > 0) {
+                                resultHtml += `<br><strong>📦 Kalemler:</strong><br>`;
+                                fields.line_items.forEach((item, index) => {
+                                    resultHtml += `${index + 1}. ${item.description} - ${item.quantity} × ${item.unit_price} = ${item.total} TL<br>`;
+                                });
+                            }
+                        }
+                        
+                        if (data.ocr_result.note) {
+                            resultHtml += `<br><em>${data.ocr_result.note}</em>`;
+                        }
+                        
+                        if (data.ocr_result.raw_text) {
+                            resultHtml += `<br><br><details><summary>📖 Ham OCR Metni</summary><pre style="text-align: left; font-size: 12px; margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 4px;">${data.ocr_result.raw_text}</pre></details>`;
+                        }
+                    }
+                    
+                    showResult(resultHtml, 'success');
+                } else {
+                    showResult(`❌ Hata: ${data.message || 'Bilinmeyen hata'}`, 'error');
+                }
+                
+            } catch (error) {
+                showResult(`❌ Network hatası: ${error.message}`, 'error');
+            } finally {
+                uploadBtn.disabled = false;
+                uploadBtn.innerHTML = '📤 Yükle ve İşle';
+            }
+        }
+        
+        function showResult(message, type) {
+            const result = document.getElementById('result');
+            result.innerHTML = message;
+            result.className = `result ${type}`;
+            result.style.display = 'block';
+        }
+        
+        // Sayfa yüklendiğinde backend durumunu kontrol et
+        window.onload = function() {
+            checkBackendStatus();
+        };
+    </script>
+</body>
+</html>
