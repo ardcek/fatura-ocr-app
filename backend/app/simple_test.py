@@ -114,7 +114,7 @@ async def test_endpoint():
 
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
-    """Dosya yükleme endpoint'i - Sadece Mock Data"""
+    """Dosya yükleme endpoint'i - Gerçek OCR ile"""
     try:
         # Dosya türü kontrolü
         if not file.content_type.startswith('image/'):
@@ -133,70 +133,58 @@ async def upload_file(file: UploadFile = File(...)):
         
         print(f"File uploaded: {file.filename}, size: {len(contents)} bytes")
         
-        # MOCK OCR RESPONSE (Tesseract gerekmiyor)
-        import random
-        from datetime import datetime
-        
-        mock_fields = {
-            "company_name": "AKILLI TEKNOLOJİ A.Ş.",
-            "invoice_number": f"FTR-2024-{random.randint(1000, 9999)}",
-            "date": datetime.now().strftime("%Y-%m-%d"),
-            "tax_number": f"{random.randint(1000000000, 9999999999)}",
-            "total_amount": round(random.uniform(1000, 15000), 2),
-            "vat_amount": round(random.uniform(180, 2700), 2),
-            "line_items": [
-                {
-                    "description": "Web Tasarım Hizmeti",
-                    "quantity": 1,
-                    "unit_price": round(random.uniform(800, 3000), 2),
-                    "total": round(random.uniform(800, 3000), 2)
-                },
-                {
-                    "description": "SEO Optimizasyon",
-                    "quantity": 1,
-                    "unit_price": round(random.uniform(500, 1500), 2), 
-                    "total": round(random.uniform(500, 1500), 2)
+        # GERÇEİ OCR İŞLEMİ DENEYİMİ
+        try:
+            from ocr import ocr_engine
+            print("OCR engine imported successfully")
+            
+            # OCR işlemi yap
+            ocr_result = ocr_engine.process_document(contents, 'image')
+            print(f"OCR completed - confidence: {ocr_result.confidence}")
+            
+            return {
+                "status": "success",
+                "message": "Dosya başarıyla işlendi (Gerçek OCR)",
+                "filename": file.filename,
+                "size": len(contents),
+                "content_type": file.content_type,
+                "ocr_result": {
+                    "raw_text": ocr_result.raw_text,
+                    "confidence": round(ocr_result.confidence, 3),
+                    "extracted_fields": ocr_result.extracted_fields,
+                    "note": "🎉 Gerçek Tesseract OCR ile işlendi!"
                 }
-            ]
-        }
-        
-        print(f"Generated mock fields: {mock_fields}")
-        
-        response_data = {
-            "status": "success",
-            "message": "Dosya başarıyla işlendi (OCR simülasyon)",
-            "filename": file.filename,
-            "size": len(contents),
-            "content_type": file.content_type,
-            "ocr_result": {
-                "raw_text": f"""=== FATURA OCR SİMÜLASYONU ===
-
-Dosya: {file.filename}
-Boyut: {len(contents):,} bytes
-Format: {file.content_type}
-
-FATURA BİLGİLERİ:
-================
-Firma Adı: {mock_fields['company_name']}
-Fatura No: {mock_fields['invoice_number']}
-Tarih: {mock_fields['date']}
-Vergi No: {mock_fields['tax_number']}
-
-TUTAR BİLGİLERİ:
-===============
-Toplam: {mock_fields['total_amount']} TL
-KDV: {mock_fields['vat_amount']} TL
-
-KALEMLER:
-=========""",
-                "confidence": round(random.uniform(0.75, 0.95), 3),
-                "extracted_fields": mock_fields,
-                "note": "🚀 Bu gelişmiş OCR simülasyonu! Gerçek OCR için Tesseract kurulum gerekli."
             }
-        }
-        
-        print(f"Sending response: {response_data}")
-        return response_data
+            
+        except Exception as ocr_error:
+            print(f"OCR Error: {ocr_error}")
+            # OCR hatası varsa fallback mock data
+            import random
+            from datetime import datetime
+            
+            mock_fields = {
+                "company_name": "MOCK - OCR HATASI",
+                "invoice_number": f"ERROR-{random.randint(1000, 9999)}",
+                "date": datetime.now().strftime("%Y-%m-%d"),
+                "tax_number": "Mock veriler",
+                "total_amount": round(random.uniform(100, 1000), 2),
+                "vat_amount": round(random.uniform(18, 180), 2),
+                "line_items": []
+            }
+            
+            return {
+                "status": "success",
+                "message": f"Dosya yüklendi (OCR hatası: {str(ocr_error)[:100]}...)",
+                "filename": file.filename,
+                "size": len(contents),
+                "content_type": file.content_type,
+                "ocr_result": {
+                    "raw_text": f"OCR HATA DETAYI:\n{str(ocr_error)}\n\nDosya: {file.filename}\nBoyut: {len(contents)} bytes",
+                    "confidence": 0.0,
+                    "extracted_fields": mock_fields,
+                    "note": f"❌ OCR hatası! Detay: {str(ocr_error)}"
+                }
+            }
         
     except Exception as e:
         print(f"Upload error: {e}")
